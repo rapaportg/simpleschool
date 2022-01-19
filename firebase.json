@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "/build/web",
+    "public": "./simpleschool/build/web",
     "ignore": [
       "firebase.json",
       "**/.*",
