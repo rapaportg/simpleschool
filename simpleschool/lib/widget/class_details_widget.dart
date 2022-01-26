@@ -77,7 +77,7 @@ class ClassDetailsWidget extends StatelessWidget {
           children: [
             Text("${type}: "),
             Padding(padding: EdgeInsets.fromLTRB(8, 0, 8, 0)),
-            Text(
+            SelectableText(
               name,
               style: TextStyle(
                   fontWeight: FontWeight.bold, color: Colors.blueGrey.shade700),
@@ -213,7 +213,7 @@ class ClassDetailsWidget extends StatelessWidget {
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
       Container(
           child: Row(children: [
-        Text(
+        SelectableText(
           name,
           style: TextStyle(
               fontSize: 24,
@@ -240,7 +240,7 @@ class ClassDetailsWidget extends StatelessWidget {
               color: Colors.blueGrey.shade700,
             )),
       ])),
-      Text(id)
+      SelectableText(id)
     ]));
   }
 

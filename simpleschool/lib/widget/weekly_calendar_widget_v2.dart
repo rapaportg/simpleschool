@@ -1,15 +1,18 @@
 import 'dart:math';
 
+import 'package:firebase_core_web/firebase_core_web_interop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+
 import 'package:simpleschool/model/meeting.dart';
 import 'package:simpleschool/widget/calendar_input_form.dart';
 import 'package:simpleschool/widget/calendar_input_form_with_to.dart';
 import 'package:simpleschool/widget/calendar_input_form_type_menu.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:simpleschool/widget/event_details_widget.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -46,6 +49,32 @@ class _MyCalendar2 extends State<MyCalendar2> {
 
   _MyCalendar2(this.user);
 
+  Future<Widget> _buildAppointmentDetails(String appointmentId) async {
+    print('/users/${user.uid}/events/${appointmentId}');
+    var appointmentSnapshot = await FirebaseFirestore.instance
+        .doc('/users/${user.uid}/events/${appointmentId}')
+        .get();
+
+    var eventRef = FirebaseFirestore.instance
+        .doc('/events/${appointmentSnapshot.data()!['eventId']}');
+
+
+    var eventSnapshot = await eventRef.get();
+    //return Text(eventSnapshot.data()!['eventName']);
+    return EventDetailsWidget(
+        user: user, eventRef: eventRef, eventSnapshot: eventSnapshot );
+
+    // ----------------------------------------
+    // Make a new widget
+    // Todo: [] title
+    //       [] time
+    //       [] description
+    //       [] pdf reader
+    //       [] discussion board
+    //       [] ability to edit
+    // -----------------------------------------
+  }
+
   Widget _calendar(List<Meeting> _meetings) {
     return Scaffold(
         body: SfCalendar(
@@ -53,11 +82,48 @@ class _MyCalendar2 extends State<MyCalendar2> {
       showDatePickerButton: true,
       allowAppointmentResize: true,
       showCurrentTimeIndicator: true,
+      timeSlotViewSettings: TimeSlotViewSettings(timeIntervalHeight: 75),
       monthViewSettings: MonthViewSettings(showAgenda: true),
       dataSource: MeetingDataSource(_meetings),
       onTap: (CalendarTapDetails details) async {
         print(details.targetElement);
 
+        if (details.targetElement == CalendarElement.appointment) {
+          var appointmentIndex = details.targetElement.index;
+          String appointmentId = details.appointments![appointmentIndex - 3].id;
+          await showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                    scrollable: true,
+                    content: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: FutureBuilder(
+                          future: _buildAppointmentDetails(appointmentId),
+                          builder:
+                              (BuildContext context, AsyncSnapshot snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return (Center(
+                                child: CircularProgressIndicator(),
+                              ));
+                            } else if (snapshot.connectionState ==
+                                ConnectionState.done) {
+                              if (snapshot.hasError) {
+                                return const Center(
+                                    child: Text("Snapshot Error"));
+                              } else if (snapshot.hasData) {
+                                return snapshot.data;
+                              } else {
+                                print("empty data");
+                                return Text("empty data");
+                              }
+                            }
+                            return Text(snapshot.data);
+                          }),
+                    ));
+              });
+        }
         if (details.targetElement == CalendarElement.calendarCell) {
           await showDialog(
               context: context,
@@ -116,6 +182,7 @@ class _MyCalendar2 extends State<MyCalendar2> {
 
     int len = userEventsSnapshot.docs.length;
     for (var i = 0; i < len; i++) {
+      var meetingId = userEventsSnapshot.docs[i].id;
       var eventName = userEventsSnapshot.docs[i].data()['eventName'];
       //print(userEventsSnapshot.docs[i].data()['classId']);
       //print(userEventsSnapshot.docs[i].data()['className']);
@@ -127,7 +194,7 @@ class _MyCalendar2 extends State<MyCalendar2> {
       var to = DateTime.fromMillisecondsSinceEpoch(
           userEventsSnapshot.docs[i].data()['to'].seconds * 1000);
       //print(userEventsSnapshot.docs[i].data()['type']);
-      var _meeting = Meeting(eventName, from, to, color, false);
+      var _meeting = Meeting(eventName, from, to, color, false, meetingId);
       meetings.add(_meeting);
     }
 

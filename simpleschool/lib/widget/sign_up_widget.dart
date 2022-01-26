@@ -38,7 +38,7 @@ class SignUpWidget extends StatelessWidget {
                       Provider.of<GoogleSignInProvider>(context, listen: false);
                   provider.googleLogin();
                 },
-                child: Text("Sign up with Google"),
+                child: Text("Sign up/Sign in with Google"),
                 style: ElevatedButton.styleFrom(
                   primary: Colors.blue,
                   onPrimary: Colors.white,
@@ -46,16 +46,7 @@ class SignUpWidget extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 40),
-              RichText(
-                text: TextSpan(
-                  text: "Already have an account? ",
-                  children: [
-                    TextSpan(
-                        text: "Log in",
-                        style: TextStyle(decoration: TextDecoration.underline)),
-                  ],
-                ),
-              ),
+              
               Spacer(),
             ],
           ),

@@ -44,7 +44,7 @@ class _MyCalendar extends State<MyCalendar> {
       allowAppointmentResize: true,
       showCurrentTimeIndicator: true,
       monthViewSettings: const MonthViewSettings(showAgenda: true),
-      dataSource: MeetingDataSource(_getDataSource()),
+      dataSource: null,
       onTap: (CalendarTapDetails details) async {
         // print(details.date!);
         // print(details.appointments);
@@ -103,29 +103,29 @@ class _MyCalendar extends State<MyCalendar> {
   }
 }
 
-List<Meeting> _getDataSource() {
-  final List<Meeting> meetings = <Meeting>[];
+// List<Meeting> _getDataSource() {
+//   final List<Meeting> meetings = <Meeting>[];
 
-  final DateTime today = DateTime.now();
-  DateTime startTime = DateTime(today.year, today.month, today.day, 9, 0, 0);
-  DateTime endTime = startTime.add(const Duration(hours: 2));
-  meetings.add(Meeting(
-      'Conference', startTime, endTime, const Color(0xFF0F8644), false));
+//   final DateTime today = DateTime.now();
+//   DateTime startTime = DateTime(today.year, today.month, today.day, 9, 0, 0);
+//   DateTime endTime = startTime.add(const Duration(hours: 2));
+//   meetings.add(Meeting(
+//       'Conference', startTime, endTime, const Color(0xFF0F8644), false));
 
-  startTime = DateTime(today.year, today.month, today.day - 1, 12, 0, 0);
-  endTime = startTime.add(const Duration(hours: 1));
-  meetings
-      .add(Meeting('Doctors', startTime, endTime, randomOpaqueColor(), false));
+//   startTime = DateTime(today.year, today.month, today.day - 1, 12, 0, 0);
+//   endTime = startTime.add(const Duration(hours: 1));
+//   meetings
+//       .add(Meeting('Doctors', startTime, endTime, randomOpaqueColor(), false));
 
-  startTime = DateTime(today.year, today.month, today.day + 2, 14, 0, 0);
-  endTime = startTime.add(const Duration(hours: 1));
-  meetings
-      .add(Meeting('Doctors', startTime, endTime, randomOpaqueColor(), false));
+//   startTime = DateTime(today.year, today.month, today.day + 2, 14, 0, 0);
+//   endTime = startTime.add(const Duration(hours: 1));
+//   meetings
+//       .add(Meeting('Doctors', startTime, endTime, randomOpaqueColor(), false));
 
-  startTime = DateTime(today.year, today.month, today.day + 4, 15, 0, 0);
-  endTime = startTime.add(const Duration(hours: 1));
-  meetings
-      .add(Meeting('Doctors', startTime, endTime, randomOpaqueColor(), false));
+//   startTime = DateTime(today.year, today.month, today.day + 4, 15, 0, 0);
+//   endTime = startTime.add(const Duration(hours: 1));
+//   meetings
+//       .add(Meeting('Doctors', startTime, endTime, randomOpaqueColor(), false));
 
-  return meetings;
-}
+//   return meetings;
+// }

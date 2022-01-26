@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:simpleschool/widget/weekly_calendar_widget_v2.dart';
 import 'package:simpleschool/widget/user_class_list_widget.dart';
+import 'package:simpleschool/widget/add_class_widget.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:string_validator/string_validator.dart';
@@ -88,9 +89,9 @@ class UserLoggedInWidget extends StatelessWidget {
                             return AlertDialog(
                               scrollable: true,
                               content: Padding(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.all(2),
                                 // need to updte to accept class
-                                child: Text("test"),
+                                child: AddClassWidget(),
                               ),
                             );
                           });

@@ -49,6 +49,7 @@ class _CalendarInputFormWithTo extends State<CalendarInputFormWithTo> {
   DateTime? date;
   DateTime? from;
   DateTime? to;
+  String? meetingId;
   List<String> _classes = [];
 
   DateTime currentDate = DateTime.now();
@@ -226,7 +227,7 @@ class _CalendarInputFormWithTo extends State<CalendarInputFormWithTo> {
 
     print(color);
 
-    var document = {
+    var document1 = {
       'eventName': form['eventName'],
       'from': finalFrom.toUtc(),
       'isAllDay': false,
@@ -238,9 +239,21 @@ class _CalendarInputFormWithTo extends State<CalendarInputFormWithTo> {
       'description': "placeholder"
     };
 
-    await addToCollection('events', document);
+    var _eventId = await addToCollection('events', document1);
 
-    await users.doc(user.uid).collection('events').add(document);
+    var document2 = {
+      'eventName': form['eventName'],
+      'from': finalFrom.toUtc(),
+      'isAllDay': false,
+      'classId': '/classes/${classId}',
+      'className': className,
+      'background': color,
+      'to': finalTo,
+      'type': type,
+      'description': "placeholder",
+      'eventId' : _eventId
+    };
+    await users.doc(user.uid).collection('events').add(document2);
   }
 
   Future<void> _getClasses() async {

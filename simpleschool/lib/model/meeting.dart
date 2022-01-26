@@ -1,3 +1,5 @@
+import 'dart:html';
+
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
@@ -8,8 +10,10 @@ class Meeting {
   DateTime? to;
   Color? background;
   bool? isAllDay;
+  String? id;
 
-  Meeting(this.eventName, this.from, this.to, this.background, this.isAllDay);
+  Meeting(this.eventName, this.from, this.to, this.background, this.isAllDay,
+      this.id);
 }
 
 class MeetingDataSource extends CalendarDataSource {
@@ -40,6 +44,11 @@ class MeetingDataSource extends CalendarDataSource {
   @override
   bool isAllDay(int index) {
     return appointments![index].isAllDay;
+  }
+
+  @override
+  String getId(int index) {
+    return appointments![index].id;
   }
 
   // @override

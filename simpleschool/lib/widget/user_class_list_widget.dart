@@ -47,7 +47,7 @@ class _UserClassListWidgetState extends State<UserClassListWidget> {
 
     var numOfClasses = userSnapshot.data()!['classes'].length;
     var _data = userSnapshot.data()!['classes'];
-
+    //print(numOfClasses);
     for (var i = 0; i < numOfClasses; i++) {
       var classRef = await FirebaseFirestore.instance
           .doc("classes/${_data[i]['classId'].id}")
@@ -55,11 +55,10 @@ class _UserClassListWidgetState extends State<UserClassListWidget> {
       var _className = classRef.data()!['name'];
       var tmp =
           _buildClass(_className, _data[i]['classId'].id, _data[i]['color']);
-      print(tmp);
+
       ret.add(tmp);
     }
 
-    print(ret);
     return ret;
   }
 
@@ -80,13 +79,13 @@ class _UserClassListWidgetState extends State<UserClassListWidget> {
                     Spacer(flex: 5),
                     Text(
                       _className,
-                      overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.clip,
                       style: TextStyle(fontSize: 14),
                     ),
+                    
                     IconButton(
                       icon: const Icon(Icons.menu_outlined, size: 14),
                       onPressed: () {
-                        print(classId);
                         showDialog(
                             context: context,
                             builder: (BuildContext context) {
@@ -131,7 +130,7 @@ class _UserClassListWidgetState extends State<UserClassListWidget> {
                 if (snapshot.hasError) {
                   return const Text("Error");
                 } else if (snapshot.hasData) {
-                  print(snapshot.data);
+              
                   return Column(
                     children: snapshot.data!,
                   );
