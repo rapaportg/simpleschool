@@ -46,7 +46,12 @@ class SignUpWidget extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 40),
-              
+              RichText(
+                text: TextSpan(
+                  text: "Please do not share the URL given to access this pre-released version of SimpleSchool",
+                  
+                ),
+              ),
               Spacer(),
             ],
           ),

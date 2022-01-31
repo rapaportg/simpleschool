@@ -91,7 +91,7 @@ class UserLoggedInWidget extends StatelessWidget {
                               content: Padding(
                                 padding: const EdgeInsets.all(2),
                                 // need to updte to accept class
-                                child: AddClassWidget(),
+                                child: AddClassWidget(user: user),
                               ),
                             );
                           });

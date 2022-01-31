@@ -36,7 +36,9 @@ class ClassDetailsWidget extends StatelessWidget {
 
   Future<Map<String, dynamic>> _getClassDetails() async {
     var classSnapshot =
-        await FirebaseFirestore.instance.doc('classes/${classId}').get();
+        await FirebaseFirestore.instance.doc('${classId}').get();
+      
+    
 
     var _className = classSnapshot.data()!['name'];
     var _color = classSnapshot.data()!['color'];

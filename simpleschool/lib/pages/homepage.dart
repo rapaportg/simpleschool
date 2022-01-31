@@ -4,7 +4,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:simpleschool/widget/logged_in_widget.dart';
 
+
+
 class HomePage extends StatelessWidget {
+  
+  // Future logout() async {
+  //   await _firebaseAuth.signOut().then((value) => Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginPage()),(route) => false))); 
+  // }
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
@@ -13,7 +19,16 @@ class HomePage extends StatelessWidget {
             "  Simple School",
             style: TextStyle(fontSize: 16),
           ),
-          toolbarHeight: 32,
+          toolbarHeight: 36,
+          actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Show Snackbar',
+            onPressed: () {
+              //logout();
+            },
+          ),
+          ],
         ),
         body: StreamBuilder(
             stream: FirebaseAuth.instance.authStateChanges(),

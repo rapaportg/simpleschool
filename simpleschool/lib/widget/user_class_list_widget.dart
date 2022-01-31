@@ -46,15 +46,21 @@ class _UserClassListWidgetState extends State<UserClassListWidget> {
         .get();
 
     var numOfClasses = userSnapshot.data()!['classes'].length;
-    var _data = userSnapshot.data()!['classes'];
     //print(numOfClasses);
+    var _data = userSnapshot.data()!['classes'];
+    //print(_data[0]['classId']);
     for (var i = 0; i < numOfClasses; i++) {
       var classRef = await FirebaseFirestore.instance
-          .doc("classes/${_data[i]['classId'].id}")
+          .doc(_data[i]['classId'])
           .get();
+      //print(classRef);
       var _className = classRef.data()!['name'];
+      //print(_className);
+      //print(_data[i]['classId']);
+      //print(_data[i]['color']);
       var tmp =
-          _buildClass(_className, _data[i]['classId'].id, _data[i]['color']);
+          _buildClass(_className, _data[i]['classId'], _data[i]['color']);
+      
 
       ret.add(tmp);
     }
