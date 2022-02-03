@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_firestore_web/cloud_firestore_web.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:simpleschool/widget/add_class_widget.dart';
 
 import 'package:simpleschool/widget/class_details_widget.dart';
 
@@ -14,7 +15,7 @@ List<Color> colors = [
   Colors.green.shade300,
   Colors.purple.shade300,
   Colors.pink.shade300,
-  Colors.grey.shade300,
+  Colors.lightGreenAccent.shade400,
   Colors.yellow.shade300,
   Colors.teal.shade300,
 ];
@@ -45,22 +46,17 @@ class _UserClassListWidgetState extends State<UserClassListWidget> {
         .doc(user.uid)
         .get();
 
+    if (userSnapshot.data()!.containsKey('classes') == false) {
+      return [Text("You arent in any classes")];
+    }
+
     var numOfClasses = userSnapshot.data()!['classes'].length;
-    //print(numOfClasses);
     var _data = userSnapshot.data()!['classes'];
-    //print(_data[0]['classId']);
     for (var i = 0; i < numOfClasses; i++) {
-      var classRef = await FirebaseFirestore.instance
-          .doc(_data[i]['classId'])
-          .get();
-      //print(classRef);
+      var classRef =
+          await FirebaseFirestore.instance.doc(_data[i]['classId']).get();
       var _className = classRef.data()!['name'];
-      //print(_className);
-      //print(_data[i]['classId']);
-      //print(_data[i]['color']);
-      var tmp =
-          _buildClass(_className, _data[i]['classId'], _data[i]['color']);
-      
+      var tmp = _buildClass(_className, _data[i]['classId'], _data[i]['color']);
 
       ret.add(tmp);
     }
@@ -72,7 +68,8 @@ class _UserClassListWidgetState extends State<UserClassListWidget> {
     return Container(
         child: Padding(
             padding: EdgeInsets.fromLTRB(8, 8, 2, 4),
-            child: Column(
+            child: SingleChildScrollView(
+                child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -82,13 +79,17 @@ class _UserClassListWidgetState extends State<UserClassListWidget> {
                       color: _getColor(color),
                       size: MediaQuery.of(context).size.width * 0.01,
                     ),
-                    Spacer(flex: 5),
-                    Text(
-                      _className,
-                      overflow: TextOverflow.clip,
-                      style: TextStyle(fontSize: 14),
+                    Spacer(),
+                    Expanded(
+                      flex: 4,
+                      child: Text(
+                        _className,
+                        overflow: TextOverflow.clip,
+                        maxLines: 2,
+                        style: TextStyle(fontSize: 14),
+                      ),
                     ),
-                    
+                    Spacer(),
                     IconButton(
                       icon: const Icon(Icons.menu_outlined, size: 14),
                       onPressed: () {
@@ -111,7 +112,7 @@ class _UserClassListWidgetState extends State<UserClassListWidget> {
                     height: 1,
                     color: Colors.grey.shade200),
               ],
-            )));
+            ))));
   }
 
   // List<Widget> _buildClassListWidget() {
@@ -126,23 +127,67 @@ class _UserClassListWidgetState extends State<UserClassListWidget> {
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height * 0.5,
         color: Colors.white,
-        child: FutureBuilder(
-            future: _getClasses(),
-            builder:
-                (BuildContext context, AsyncSnapshot<List<Widget>> snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return CircularProgressIndicator();
-              } else if (snapshot.connectionState == ConnectionState.done) {
-                if (snapshot.hasError) {
-                  return const Text("Error");
-                } else if (snapshot.hasData) {
-              
-                  return Column(
-                    children: snapshot.data!,
-                  );
-                }
-              }
-              return Text("State: ${snapshot.connectionState}");
-            }));
+        child: Scaffold(
+            backgroundColor: Colors.grey.shade100,
+            appBar: AppBar(
+              automaticallyImplyLeading: false,
+              backgroundColor: Colors.white,
+              toolbarHeight: 35,
+              elevation: 0,
+              centerTitle: false,
+              title: const Text(
+                'Classes',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.normal,
+                    fontSize: 18),
+              ),
+              actions: [
+                IconButton(
+                  color: Colors.grey.shade800,
+                  padding: EdgeInsets.all(0),
+                  hoverColor: Colors.blue,
+                  iconSize: 22,
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            scrollable: true,
+                            content: Padding(
+                              padding: const EdgeInsets.all(2),
+                              // need to updte to accept class
+                              child: AddClassWidget(
+                                user: user,
+                                updateParent: () {
+                                  setState(() {});
+                                },
+                              ),
+                            ),
+                          );
+                        });
+                  },
+                ),
+              ],
+            ),
+            body: FutureBuilder(
+                future: _getClasses(),
+                builder: (BuildContext context,
+                    AsyncSnapshot<List<Widget>> snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return CircularProgressIndicator();
+                  } else if (snapshot.connectionState == ConnectionState.done) {
+                    if (snapshot.hasError) {
+                      return const Text("Error");
+                    } else if (snapshot.hasData) {
+                      return Column(
+                        children: snapshot.data!,
+                      );
+                    }
+                  }
+                  return Text("State: ${snapshot.connectionState}");
+                })));
   }
 }

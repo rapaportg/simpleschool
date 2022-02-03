@@ -13,15 +13,19 @@ const double contHeight = 20;
 
 class AddClassWidget extends StatefulWidget {
   final User user;
-  const AddClassWidget({Key? key, required this.user}) : super(key: key);
+  final Function() updateParent;
+  const AddClassWidget(
+      {Key? key, required this.user, required this.updateParent})
+      : super(key: key);
 
   @override
-  State<AddClassWidget> createState() => _AddClassWidget(user);
+  State<AddClassWidget> createState() => _AddClassWidget(user, updateParent);
 }
 
 class _AddClassWidget extends State<AddClassWidget> {
   final User user;
-  _AddClassWidget(this.user);
+  final Function() updateParent;
+  _AddClassWidget(this.user, this.updateParent);
 
   Widget _searchResults = Text('empty');
 
@@ -30,7 +34,9 @@ class _AddClassWidget extends State<AddClassWidget> {
     var snapshots =
         await FirebaseFirestore.instance.collection('classes').get();
 
+    //print(snapshots.docs.length);
     for (var i = 0; i < snapshots.docs.length; i++) {
+      //print(snapshots.docs[i]['name']);
       var tmp = Class(
           snapshots.docs[i].id,
           snapshots.docs[i]['name'],
@@ -46,6 +52,7 @@ class _AddClassWidget extends State<AddClassWidget> {
 
       list.add(tmp);
     }
+    // print(list);
     return list;
   }
 
@@ -83,11 +90,12 @@ class _AddClassWidget extends State<AddClassWidget> {
 
   Widget _buildSearchResults(String search) {
     List<Widget> list = [];
-    _getAllClasses();
+    //_getAllClasses();
     return FutureBuilder(
       future: search == "" ? _getAllClasses() : _getClasses(search),
       initialData: [],
       builder: (BuildContext context, AsyncSnapshot snapshot) {
+        //print(snapshot);
         if (snapshot.connectionState == ConnectionState.waiting) {
           return (Center(
             child: CircularProgressIndicator(),
@@ -126,18 +134,24 @@ class _AddClassWidget extends State<AddClassWidget> {
   List<Widget> _meetingSchedulePart(Map<String, dynamic> week) {
     List<Widget> list = [];
 
+    //print(week);
+
     if (week['monday']) {
       list.add(Text('Mon, '));
     }
+    //print('C1');
     if (week['tuesday']) {
       list.add(Text('Tues, '));
     }
+    //print('C2');
     if (week['wednesday']) {
       list.add(Text('Wed, '));
     }
+    //print('C3');
     if (week['thursday']) {
       list.add(Text('Thur, '));
     }
+    //print('C4');
     if (week['friday']) {
       list.add(Text("Fri"));
     }
@@ -148,6 +162,7 @@ class _AddClassWidget extends State<AddClassWidget> {
     //print(meetingSchedule);
     return Container(
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         //mainAxisSize: MainAxisSize.min,
         //mainAxisAlignment:  MainAxisAlignment.spaceBetween,
         children: _meetingSchedulePart(meetingSchedule),
@@ -159,8 +174,10 @@ class _AddClassWidget extends State<AddClassWidget> {
     return Container(
         padding: EdgeInsets.all(4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SelectableText(
+          Text(
             _class.getName(),
+            overflow: TextOverflow.clip,
+            maxLines: 2,
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           SelectableText(
@@ -191,18 +208,27 @@ class _AddClassWidget extends State<AddClassWidget> {
   Widget _classItem3(Class _class) {
     return Container(
         padding: EdgeInsets.fromLTRB(16, 4, 16, 4),
-        child: Column(mainAxisAlignment: MainAxisAlignment.start, children: [
-          Text("Session", style: TextStyle(fontWeight: FontWeight.bold)),
-          SelectableText(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          // ignore: prefer_const_constructors
+          Text(
+            "Session",
+            style: TextStyle(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          Text(
             "${_class.getStartDateAsStr()} to ${_class.getEndDateAsStr()}",
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.normal),
+          ),
+          Text(
+            _class.getMeetingTimeAsStr(),
+            style: TextStyle(fontWeight: FontWeight.w500),
+            textAlign: TextAlign.center,
           ),
           _meetingSchedule(_class.getMeetingSchedule()),
         ]));
   }
 
-  Future<void> _updateUsedColors(
-      String _userRef, Map<String, dynamic> data) async {
+  Future<void> _updateUsedColors(String _userRef, List<dynamic> data) async {
     await FirebaseFirestore.instance
         .collection('users')
         .doc(_userRef)
@@ -212,76 +238,114 @@ class _AddClassWidget extends State<AddClassWidget> {
   Future<void> _addClass(String _user, String _class, String _className) async {
     var userSnapshot =
         await FirebaseFirestore.instance.collection('users').doc(_user).get();
-    List _userClasses = userSnapshot.data()!['classes'];
-    //print(_userClasses.length);
-    Map<String, dynamic> list = userSnapshot.data()!['used_colors'];
-    var index = 0;
 
-    for (var i = 0; i < _userClasses.length; i++) {
-      //print(_userClasses[i]);
-      //print("/classes/${_class}");
-      if (_userClasses[i]['classId'] == "/classes/${_class}") {
-        //print("You are already in this class");
-        //Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('You are already in this class')));
-        return;
+    if (userSnapshot.data()!.containsKey('classes') == false) {
+      List<bool> list2 = [
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+      ];
+      var data = {'classId': "/classes/$_class", 'color': 0};
+      await FirebaseFirestore.instance.collection('users').doc(_user).set({
+        "classes": [data],
+        "used_colors": list2
+      });
+      updateParent();
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Added to $_className')));
+      return;
+    } else {
+      List _userClasses = userSnapshot.data()!['classes'];
+      //print(_userClasses.length);
+
+      for (var i = 0; i < _userClasses.length; i++) {
+        //print(_userClasses[i]);
+        //print("/classes/${_class}");
+        if (_userClasses[i]['classId'] == "/classes/$_class") {
+          //print("You are already in this class");
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('You are already in this class')));
+          return;
+        }
       }
-    }
-
-    for (var i = 0; i <= list.length; i++) {
-      print("Index ${i}: ${list[i]}");
-      if (list["${i}"] == false) {
+      var index = 0;
+      List<dynamic> list = userSnapshot.data()!['used_colors'];
+      //print(list);
+      for (var i = 0; i <= list.length; i++) {
+       // print("Index $i: ${list[i]}");
+        if (list[i] == false) {
+          index = i;
+          list[i] = true;
+          _updateUsedColors(_user, list);
+          break;
+        }
         index = i;
-        list["${i}"] = true;
-        _updateUsedColors(_user, list);
-        break;
       }
-      index = i;
+      list[index] = true;
+      _updateUsedColors(_user, list);
+      var data = {'classId': "/classes/$_class", 'color': index};
+      await FirebaseFirestore.instance.collection('users').doc(_user).update({
+        "classes": FieldValue.arrayUnion([data])
+      });
+      updateParent();
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Added to $_className')));
     }
-    _updateUsedColors(_user, list);
-    var data = {'classId': "/classes/${_class}", 'color': index};
-    await FirebaseFirestore.instance.collection('users').doc(_user).update({
-      "classes": FieldValue.arrayUnion([data])
-    });
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('Added to ${_className}')));
   }
 
   Widget _classItem4(Class _class) {
     return Container(
         padding: EdgeInsets.all(8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
-      ElevatedButton(
-          onPressed: () {
-            showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  //print(_class.getId());
-                  return AlertDialog(
-                      scrollable: true,
-                      content: Padding(
-                        padding: const EdgeInsets.all(8),
-                        // need to updte to accept class
-                        child: ClassDetailsWidget(
-                            classId: '/classes/${_class.getId()}'),
-                      ));
-                });
-          },
-          child: Text("View Class Details")),
-      Container(
-        margin: EdgeInsets.all(4),
-        child: ElevatedButton(
-            style: ButtonStyle(
-              backgroundColor: MaterialStateProperty.all(Colors.green),
-            ),
-            onPressed: () {
-              _addClass(user.uid, _class.getId(), _class.getName());
-            },
-            child: Text("Add Class")),
-      ),
-    ]));
+          Container(
+            width: MediaQuery.of(context).size.width,
+            margin: EdgeInsets.all(2),
+            child: ElevatedButton(
+                onPressed: () {
+                  showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        //print(_class.getId());
+                        return AlertDialog(
+                            scrollable: true,
+                            content: Padding(
+                              padding: const EdgeInsets.all(8),
+                              // need to updte to accept class
+                              child: ClassDetailsWidget(
+                                  classId: '/classes/${_class.getId()}'),
+                            ));
+                      });
+                },
+                child: Text(
+                  "Class Details",
+                  style: TextStyle(fontSize: 12),
+                )),
+          ),
+          Container(
+            width: MediaQuery.of(context).size.width,
+            margin: EdgeInsets.all(4),
+            child: ElevatedButton(
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all(Colors.green),
+                ),
+                onPressed: () {
+                  _addClass(user.uid, _class.getId(), _class.getName());
+                  
+                },
+                child: Text(
+                  "Add Class",
+                  style: TextStyle(fontSize: 12),
+                )),
+          ),
+        ]));
   }
 
   Widget _classItem(Class _class) {
@@ -292,16 +356,16 @@ class _AddClassWidget extends State<AddClassWidget> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _classItem1(_class),
+              Expanded(flex: 4, child: _classItem1(_class)),
               //Container(width: MediaQuery.of(context).size.width * 0.01),
-              Spacer(),
-              _classItem2(_class),
+              //Spacer(),
+              Expanded(flex: 2, child: _classItem2(_class)),
               //Container(width: MediaQuery.of(context).size.width * 0.01),
-              Spacer(),
-              _classItem3(_class),
+              //Spacer(),
+              Expanded(flex: 4, child: _classItem3(_class)),
               //_meetingSchedule(_class.getMeetingSchedule()),
-              Spacer(),
-              _classItem4(_class),
+              //Spacer(),
+              Expanded(flex: 2, child: _classItem4(_class)),
               Divider()
             ]));
   }
@@ -356,7 +420,7 @@ class _AddClassWidget extends State<AddClassWidget> {
                         scrollable: true,
                         content: Padding(
                           padding: const EdgeInsets.all(2),
-                          child: CreateNewClassWidget(),
+                          child: CreateNewClassWidget(user: user),
                         ),
                       );
                     });

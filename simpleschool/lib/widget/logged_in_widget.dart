@@ -10,7 +10,15 @@ import 'package:simpleschool/widget/add_class_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:string_validator/string_validator.dart';
 
-class UserLoggedInWidget extends StatelessWidget {
+class UserLoggedInWidget extends StatefulWidget {
+  const UserLoggedInWidget({Key? key}) : super(key: key);
+
+  @override
+  _UserLoggedInWidgetState createState() => _UserLoggedInWidgetState();
+}
+
+class _UserLoggedInWidgetState extends State<UserLoggedInWidget> {
+  var count = 0;
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser!;
@@ -62,43 +70,6 @@ class UserLoggedInWidget extends StatelessWidget {
             Text(user.displayName!),
             SizedBox(
               height: 50,
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(10, 0, 10, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Classes",
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontStyle: FontStyle.normal,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(
-                    color: Colors.grey.shade800,
-                    padding: EdgeInsets.all(0),
-                    hoverColor: Colors.blue,
-                    iconSize: 22,
-                    icon: Icon(Icons.add),
-                    onPressed: () {
-                      print("add class");
-                      showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              scrollable: true,
-                              content: Padding(
-                                padding: const EdgeInsets.all(2),
-                                // need to updte to accept class
-                                child: AddClassWidget(user: user),
-                              ),
-                            );
-                          });
-                    },
-                  ),
-                ],
-              ),
             ),
             Expanded(child: UserClassListWidget(user: user)),
           ]),
