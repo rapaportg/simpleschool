@@ -100,8 +100,13 @@ class _UserClassListWidgetState extends State<UserClassListWidget> {
                               return AlertDialog(
                                 content: ClassDetailsWidget(
                                   classId: classId,
+                                  user: user,
+                                  updateParent: () {
+                                    setState(() {});
+                                  },
                                 ),
                               );
+                            
                             });
                       },
                     ),

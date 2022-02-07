@@ -262,9 +262,17 @@ class _AddClassWidget extends State<AddClassWidget> {
       return;
     } else {
       List _userClasses = userSnapshot.data()!['classes'];
-      //print(_userClasses.length);
+      print(_userClasses.length);
 
-      for (var i = 0; i < _userClasses.length; i++) {
+      if (_userClasses.length >= 8) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('You cannot be in more than 8 classes at a time')));
+        return;
+      }
+
+      for (int i = 0; i < _userClasses.length; i++) {
+        //print(i);
         //print(_userClasses[i]);
         //print("/classes/${_class}");
         if (_userClasses[i]['classId'] == "/classes/$_class") {
@@ -277,9 +285,9 @@ class _AddClassWidget extends State<AddClassWidget> {
       }
       var index = 0;
       List<dynamic> list = userSnapshot.data()!['used_colors'];
-      //print(list);
-      for (var i = 0; i <= list.length; i++) {
-       // print("Index $i: ${list[i]}");
+      print(list);
+      for (var i = 0; i < list.length; i++) {
+        // print("Index $i: ${list[i]}");
         if (list[i] == false) {
           index = i;
           list[i] = true;
@@ -320,7 +328,7 @@ class _AddClassWidget extends State<AddClassWidget> {
                               padding: const EdgeInsets.all(8),
                               // need to updte to accept class
                               child: ClassDetailsWidget(
-                                  classId: '/classes/${_class.getId()}'),
+                                  classId: '/classes/${_class.getId()}', user: user, updateParent: updateParent,),
                             ));
                       });
                 },
@@ -338,7 +346,6 @@ class _AddClassWidget extends State<AddClassWidget> {
                 ),
                 onPressed: () {
                   _addClass(user.uid, _class.getId(), _class.getName());
-                  
                 },
                 child: Text(
                   "Add Class",

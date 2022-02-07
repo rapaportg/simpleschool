@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:simpleschool/widget/class_settings_widget.dart';
 
 List<Color> colors = [
   Colors.blue.shade300,
@@ -20,8 +22,15 @@ Color _getColor(int index) {
 
 class ClassDetailsWidget extends StatelessWidget {
   String classId;
+  User user;
+  Function updateParent;
 
-  ClassDetailsWidget({Key? key, required this.classId}) : super(key: key);
+  ClassDetailsWidget(
+      {Key? key,
+      required this.classId,
+      required this.user,
+      required this.updateParent})
+      : super(key: key);
 
   // String? _className;
   // String? _professor;
@@ -37,8 +46,6 @@ class ClassDetailsWidget extends StatelessWidget {
   Future<Map<String, dynamic>> _getClassDetails() async {
     var classSnapshot =
         await FirebaseFirestore.instance.doc('${classId}').get();
-      
-    
 
     var _className = classSnapshot.data()!['name'];
     var _color = classSnapshot.data()!['color'];
@@ -53,6 +60,7 @@ class ClassDetailsWidget extends StatelessWidget {
     var _ta = classSnapshot.data()!['ta'];
     var _taEmail = classSnapshot.data()!['ta_email'];
     var _courseId = classSnapshot.data()!['course_id'];
+    var _id = classSnapshot.id;
 
     return {
       'className': _className,
@@ -65,7 +73,8 @@ class ClassDetailsWidget extends StatelessWidget {
       'profEmail': _profEmail,
       'ta': _ta,
       'taEmail': _taEmail,
-      'courseId': _courseId
+      'courseId': _courseId,
+      'id': _id
     };
   }
 
@@ -209,7 +218,8 @@ class ClassDetailsWidget extends StatelessWidget {
     );
   }
 
-  Widget _className(String name, String id, BuildContext context) {
+  Widget _className(
+      String name, String id, BuildContext context, dynamic data) {
     return Container(
         child:
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -232,10 +242,12 @@ class ClassDetailsWidget extends StatelessWidget {
                       content: Padding(
                         padding: const EdgeInsets.all(8),
                         // need to updte to accept class
-                        child: Text("test"),
+                        child: ClassSettingsWidget(
+                            user: user, data: data, updateParent: updateParent),
                       ),
                     );
                   });
+              updateParent();
             },
             icon: Icon(
               Icons.settings,
@@ -268,8 +280,11 @@ class ClassDetailsWidget extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _className(snapshot.data!['className'],
-                            snapshot.data!['courseId'], context),
+                        _className(
+                            snapshot.data!['className'],
+                            snapshot.data!['courseId'],
+                            context,
+                            snapshot.data!),
                         Divider(color: Colors.blueGrey),
                         _contactsRow(
                           "Professor",

@@ -104,17 +104,19 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
         "classes": [data],
         "used_colors": list2
       });
-
+      Navigator.pop(context);
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Added to $_className')));
-      Navigator.pop(context);
-      return;
+
+      //return;
     } else {
       List<dynamic> usedColors = userSnapshot.data()!['used_colors'];
+     // print(usedColors.length);
       for (var i = 0; i < usedColors.length; i++) {
+       // print(i);
         if (usedColors[i] == false) {
           usedColors[i] = true;
-          var data = {'classId': "/classes/${_classRef.id}", 'color': 0};
+          var data = {'classId': "/classes/${_classRef.id}", 'color': i};
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
@@ -122,14 +124,32 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
             "classes": FieldValue.arrayUnion([data]),
             "used_colors": usedColors
           });
-
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('Added to $_className')));
           Navigator.pop(context);
-          return;
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Added to $_className'))); //return;
         }
       }
     }
+  }
+
+  int _numOfDaysPerWeek(Map<String, bool> meetingSchedule) {
+    int count = 0;
+    List<String> days = [
+      'sunday',
+      'monday',
+      'tuesday',
+      'wedensday',
+      'thursday',
+      'friday',
+      'saturday'
+    ];
+
+    for (int i = 0; i < days.length; i++) {
+      if (meetingSchedule[days[i]] == true) {
+        count++;
+      }
+    }
+    return count;
   }
 
   Future<List<Event>> _initEvents(String docId, Map document) async {
@@ -137,7 +157,11 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
 
     DateTime? startDate = document['start_date'];
     DateTime? endDate = document['end_date'];
-    var numOfEvents = startDate!.difference(endDate!).inDays;
+    int numMeetingsPerWeek = _numOfDaysPerWeek(document['meeting_schedule']);
+
+    var numOfEvents = endDate!.difference(startDate!).inDays -
+        (endDate.difference(startDate).inDays / 7) * numMeetingsPerWeek;
+
     print(numOfEvents);
 
     return events;
@@ -159,7 +183,7 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
           _generateMeetingScheduleForFirestore(data['meetingSchedule']),
       'meeting_time': _generateMeetingTimeForFirebase(data['from'], data['to']),
       'description': 'Add course description here',
-      'ta' : '',
+      'ta': '',
       'ta_email': ''
     };
 
@@ -168,7 +192,18 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
     //print(docID);
     var events = await _initEvents(docID.id, document);
 
-    await _addNewClassToUser(docID, data['className']);
+    var userSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    List tmp = userSnapshot.data()!['classes'];
+    if (tmp.length < 8) {
+      await _addNewClassToUser(docID, data['className']);
+    } else {
+      // figure out how to get snackbar to work here
+      print("cannot be in more than 8 classes");
+    }
   }
 
   @override
