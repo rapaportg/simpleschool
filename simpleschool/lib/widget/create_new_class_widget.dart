@@ -9,6 +9,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:yaml/yaml.dart';
 import 'package:simpleschool/model/class.dart';
 import 'package:simpleschool/model/event.dart';
+import 'package:simpleschool/model/meeting.dart';
 
 // course_id
 // description
@@ -111,9 +112,9 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
       //return;
     } else {
       List<dynamic> usedColors = userSnapshot.data()!['used_colors'];
-     // print(usedColors.length);
+      // print(usedColors.length);
       for (var i = 0; i < usedColors.length; i++) {
-       // print(i);
+        // print(i);
         if (usedColors[i] == false) {
           usedColors[i] = true;
           var data = {'classId': "/classes/${_classRef.id}", 'color': i};
@@ -138,7 +139,7 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
       'sunday',
       'monday',
       'tuesday',
-      'wedensday',
+      'wednesday',
       'thursday',
       'friday',
       'saturday'
@@ -152,19 +153,93 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
     return count;
   }
 
-  Future<List<Event>> _initEvents(String docId, Map document) async {
+  Event _createEvent(String classId, Map document, DateTime startDate) {
+    Meeting? newMeeting;
+    Event? newEvent;
+    DateTime tmpStart = startDate;
+    DateTime tmpEnd = startDate;
+    tmpStart = tmpStart.add(Duration(
+        hours: document['meeting_time']['start']['hour'],
+        minutes: document['meeting_time']['start']['minute']));
+    tmpEnd = tmpEnd.add(Duration(
+        hours: document['meeting_time']['end']['hour'],
+        minutes: document['meeting_time']['end']['minute']));
+
+    // print(tmpStart.toString() + " to " + tmpEnd.toString());
+
+    newMeeting =
+        Meeting(document['name'], tmpStart, tmpEnd, Colors.grey, false, null);
+
+    //print(newMeeting);
+
+    newEvent = Event(
+        classId: classId,
+        title: document['name'],
+        type: 'class',
+        meeting: newMeeting);
+
+    //print(newEvent);
+
+    return (newEvent);
+  }
+
+  Future<void> _initEvents(String classId, Map document) async {
     List<Event> events = [];
 
+    Map? meetingSchedule = document['meeting_schedule'];
     DateTime? startDate = document['start_date'];
     DateTime? endDate = document['end_date'];
+    List<DateTime>? eventDates;
     int numMeetingsPerWeek = _numOfDaysPerWeek(document['meeting_schedule']);
 
-    var numOfEvents = endDate!.difference(startDate!).inDays -
-        (endDate.difference(startDate).inDays / 7) * numMeetingsPerWeek;
+    var numOfEvents =
+        endDate!.difference(startDate!).inDays / 7 * numMeetingsPerWeek;
 
-    print(numOfEvents);
+    // print("\n\n_initEvents()");
+    // print("start date: " + startDate.toString());
+    // print("end date: " + endDate.toString());
+    // print("num of events: " + numOfEvents.toString());
+    
+    var start = startDate;
+    for (int i = 0; i < endDate.difference(startDate).inDays; i++) {
+ 
+      // if (startDate.weekday == DateTime.sunday) {
+      //   print('sunday');
+      // }
+      if (start.weekday == DateTime.monday && meetingSchedule!['monday']) {
 
-    return events;
+        events.add(_createEvent(classId, document, start));
+      }
+      if (start.weekday == DateTime.tuesday &&
+          meetingSchedule!['tuesday']) {
+
+        events.add(_createEvent(classId, document, start));
+      }
+      if (start.weekday == DateTime.wednesday &&
+          meetingSchedule!['wednesday']) {
+   
+        events.add(_createEvent(classId, document, start));
+      }
+      if (start.weekday == DateTime.thursday &&
+          meetingSchedule!['thursday']) {
+  
+        events.add(_createEvent(classId, document, start));
+      }
+      if (start.weekday == DateTime.friday && meetingSchedule!['friday']) {
+  
+        events.add(_createEvent(classId, document, start));
+      }
+      // if (startDate.weekday == DateTime.saturday) {
+      //   print('saturday');
+      // }
+
+      start = start.add(const Duration(days: 1));
+    }
+
+    print(events.length);
+    for (int i = 0; i < events.length; i++) {
+      await events[i].addEventToFirebase();
+    }
   }
 
 //TODO: add check to see if class already exists
@@ -190,7 +265,7 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
     var docID =
         await FirebaseFirestore.instance.collection('classes').add(document);
     //print(docID);
-    var events = await _initEvents(docID.id, document);
+    await _initEvents(docID.id, document);
 
     var userSnapshot = await FirebaseFirestore.instance
         .collection('users')
@@ -199,6 +274,7 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
 
     List tmp = userSnapshot.data()!['classes'];
     if (tmp.length < 8) {
+      //print("Temporarily Disabled create class _addToFirebase");
       await _addNewClassToUser(docID, data['className']);
     } else {
       // figure out how to get snackbar to work here
@@ -398,7 +474,7 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
                             FormBuilderFieldOption(
                                 value: 'tuesday', child: Text("Tues")),
                             FormBuilderFieldOption(
-                                value: 'wednseday', child: Text("Wed")),
+                                value: 'wednesday', child: Text("Wed")),
                             FormBuilderFieldOption(
                               value: 'thursday',
                               child: Text("Thur"),

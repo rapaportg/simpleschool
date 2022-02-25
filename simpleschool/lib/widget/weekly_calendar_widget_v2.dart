@@ -28,6 +28,8 @@ List<Color> colors = [
   Colors.teal.shade300,
 ];
 
+DateFormat dateFormat = DateFormat("yyyy-MM-dd");
+
 class MyCalendar2 extends StatefulWidget {
   const MyCalendar2({Key? key, required this.title, required this.user})
       : super(key: key);
@@ -49,6 +51,90 @@ class _MyCalendar2 extends State<MyCalendar2> {
 
   _MyCalendar2(this.user);
 
+  DateTime _findMonday(DateTime now) {
+    if (now.weekday == DateTime.tuesday) {
+      return now.subtract(const Duration(days: 1));
+    }
+    if (now.weekday == DateTime.wednesday) {
+      return now.subtract(const Duration(days: 2));
+    }
+    if (now.weekday == DateTime.thursday) {
+      return now.subtract(const Duration(days: 3));
+    }
+    if (now.weekday == DateTime.friday) {
+      return now.subtract(const Duration(days: 4));
+    }
+    if (now.weekday == DateTime.saturday) {
+      return now.subtract(const Duration(days: 5));
+    }
+    if (now.weekday == DateTime.sunday) {
+      return now.subtract(const Duration(days: 6));
+    }
+    return now;
+  }
+
+  Future<List<Meeting>> _getClasses() async {
+    List<Meeting> thisWeeksClasses = [];
+    DateTime now = DateTime.now();
+    //String nowStr = dateFormat.format(DateTime. now());
+    DateTime thisWeekMonday = _findMonday(now);
+
+    print(thisWeekMonday);
+
+    var userSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    var classList = userSnapshot.data()!['classes'];
+    print(classList);
+    var classEvents;
+    var classId;
+    var color;
+
+    for (var j = 0; j < classList.length; j++) {
+      classId = classList[j]['classId'];
+      color = classList[j]['color'];
+      //print(classId);
+      for (var i = 0; i < 5; i++) {
+        
+        //print(classId);
+        // print(dateFormat.format(thisWeekMonday.add(Duration(days: i))));
+        try {
+          await FirebaseFirestore.instance
+              .doc(classId)
+              .collection("events")
+              .doc(dateFormat.format(thisWeekMonday.add(Duration(days: i))))
+              .get()
+              .then((doc) {
+            if (doc.exists == true) {
+              var data = doc.data()!;
+              var meeting = Meeting(
+                  data['eventName'],
+                  DateTime.fromMillisecondsSinceEpoch(
+                      data['from'].seconds * 1000),
+                  DateTime.fromMillisecondsSinceEpoch(
+                      data['to'].seconds * 1000),
+                  colors[color],
+                  false,
+                  doc.id //firebase id for event
+                  );
+              thisWeeksClasses.add(meeting);
+            }
+          });
+        } catch (e) {
+          //print(e);
+          print("Document does not exist");
+        }
+      }
+    }
+    //print(classList);
+    //print(classList.length);
+    print(thisWeeksClasses.length);
+    print(thisWeeksClasses);
+    return (thisWeeksClasses);
+  }
+
   Future<Widget> _buildAppointmentDetails(String appointmentId) async {
     print('/users/${user.uid}/events/${appointmentId}');
     var appointmentSnapshot = await FirebaseFirestore.instance
@@ -58,11 +144,10 @@ class _MyCalendar2 extends State<MyCalendar2> {
     var eventRef = FirebaseFirestore.instance
         .doc('/events/${appointmentSnapshot.data()!['eventId']}');
 
-
     var eventSnapshot = await eventRef.get();
     //return Text(eventSnapshot.data()!['eventName']);
     return EventDetailsWidget(
-        user: user, eventRef: eventRef, eventSnapshot: eventSnapshot );
+        user: user, eventRef: eventRef, eventSnapshot: eventSnapshot);
 
     // ----------------------------------------
     // Make a new widget
@@ -82,8 +167,8 @@ class _MyCalendar2 extends State<MyCalendar2> {
       showDatePickerButton: true,
       allowAppointmentResize: true,
       showCurrentTimeIndicator: true,
-      timeSlotViewSettings: TimeSlotViewSettings(timeIntervalHeight: 75),
-      monthViewSettings: MonthViewSettings(showAgenda: true),
+      timeSlotViewSettings: const TimeSlotViewSettings(timeIntervalHeight: 75),
+      monthViewSettings: const MonthViewSettings(showAgenda: true),
       dataSource: MeetingDataSource(_meetings),
       onTap: (CalendarTapDetails details) async {
         print(details.targetElement);
@@ -104,7 +189,7 @@ class _MyCalendar2 extends State<MyCalendar2> {
                               (BuildContext context, AsyncSnapshot snapshot) {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
-                              return (Center(
+                              return (const Center(
                                 child: CircularProgressIndicator(),
                               ));
                             } else if (snapshot.connectionState ==
@@ -116,7 +201,7 @@ class _MyCalendar2 extends State<MyCalendar2> {
                                 return snapshot.data;
                               } else {
                                 print("empty data");
-                                return Text("empty data");
+                                return const Text("empty data");
                               }
                             }
                             return Text(snapshot.data);
@@ -130,7 +215,7 @@ class _MyCalendar2 extends State<MyCalendar2> {
               builder: (BuildContext context) {
                 return AlertDialog(
                   scrollable: true,
-                  title: Text('Select an entry type'),
+                  title: const Text('Select an entry type'),
                   content: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: CalendarInputFormTypeMenu(
@@ -203,12 +288,13 @@ class _MyCalendar2 extends State<MyCalendar2> {
 
   @override
   Widget build(BuildContext context) {
+    _getClasses();
     _getMeetings();
     return FutureBuilder<List<Meeting>>(
-        future: _getMeetings(),
+        future: _getClasses(),
         builder: (BuildContext context, AsyncSnapshot<List<Meeting>> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return (Center(
+            return (const Center(
               child: CircularProgressIndicator(),
             ));
           } else if (snapshot.connectionState == ConnectionState.done) {
@@ -222,7 +308,7 @@ class _MyCalendar2 extends State<MyCalendar2> {
               return _calendar([]);
             }
           }
-          return Text("Testing");
+          return const Text("Testing");
         });
   }
 }
