@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 import 'package:simpleschool/model/meeting.dart';
+import 'package:simpleschool/model/event.dart';
 import 'package:simpleschool/widget/calendar_input_form.dart';
 import 'package:simpleschool/widget/calendar_input_form_with_to.dart';
 import 'package:simpleschool/widget/calendar_input_form_type_menu.dart';
@@ -87,7 +88,7 @@ class _MyCalendar2 extends State<MyCalendar2> {
         .get();
 
     var classList = userSnapshot.data()!['classes'];
-    print(classList);
+    //print(classList);
     var classEvents;
     var classId;
     var color;
@@ -97,7 +98,6 @@ class _MyCalendar2 extends State<MyCalendar2> {
       color = classList[j]['color'];
       //print(classId);
       for (var i = 0; i < 5; i++) {
-        
         //print(classId);
         // print(dateFormat.format(thisWeekMonday.add(Duration(days: i))));
         try {
@@ -117,7 +117,7 @@ class _MyCalendar2 extends State<MyCalendar2> {
                       data['to'].seconds * 1000),
                   colors[color],
                   false,
-                  doc.id //firebase id for event
+                  classId + '/events/' + doc.id //firebase id for event
                   );
               thisWeeksClasses.add(meeting);
             }
@@ -130,24 +130,33 @@ class _MyCalendar2 extends State<MyCalendar2> {
     }
     //print(classList);
     //print(classList.length);
-    print(thisWeeksClasses.length);
-    print(thisWeeksClasses);
+    //print(thisWeeksClasses.length);
+    //print(thisWeeksClasses);
     return (thisWeeksClasses);
   }
 
-  Future<Widget> _buildAppointmentDetails(String appointmentId) async {
-    print('/users/${user.uid}/events/${appointmentId}');
-    var appointmentSnapshot = await FirebaseFirestore.instance
-        .doc('/users/${user.uid}/events/${appointmentId}')
-        .get();
+  Future<Widget> _buildEventDetails(String eventId) async {
+    print('${eventId}');
+    var eventSnapshot = await FirebaseFirestore.instance.doc(eventId).get();
 
-    var eventRef = FirebaseFirestore.instance
-        .doc('/events/${appointmentSnapshot.data()!['eventId']}');
+    Meeting meetingInfo = Meeting(
+        eventSnapshot.data()!['eventName'],
+        DateTime.fromMillisecondsSinceEpoch(eventSnapshot.data()!['from'].seconds *1000),
+        DateTime.fromMillisecondsSinceEpoch(eventSnapshot.data()!['to'].seconds *1000),
+        colors[0],
+        false,
+        eventId,
+        );
 
-    var eventSnapshot = await eventRef.get();
+    Event event = Event(
+        eventId: eventId,
+        classId: eventSnapshot.data()!['classId'],
+        title: eventSnapshot.data()!['eventName'],
+        type: eventSnapshot.data()!['type'],
+        meeting: meetingInfo);
+
     //return Text(eventSnapshot.data()!['eventName']);
-    return EventDetailsWidget(
-        user: user, eventRef: eventRef, eventSnapshot: eventSnapshot);
+    return EventDetailsWidget(user: user, event: event);
 
     // ----------------------------------------
     // Make a new widget
@@ -171,43 +180,44 @@ class _MyCalendar2 extends State<MyCalendar2> {
       monthViewSettings: const MonthViewSettings(showAgenda: true),
       dataSource: MeetingDataSource(_meetings),
       onTap: (CalendarTapDetails details) async {
-        print(details.targetElement);
+        var eventId = details.appointments![details.targetElement.index - 3].id;
 
         if (details.targetElement == CalendarElement.appointment) {
-          var appointmentIndex = details.targetElement.index;
-          String appointmentId = details.appointments![appointmentIndex - 3].id;
-          await showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AlertDialog(
-                    scrollable: true,
-                    content: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: FutureBuilder(
-                          future: _buildAppointmentDetails(appointmentId),
-                          builder:
-                              (BuildContext context, AsyncSnapshot snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return (const Center(
-                                child: CircularProgressIndicator(),
-                              ));
-                            } else if (snapshot.connectionState ==
-                                ConnectionState.done) {
-                              if (snapshot.hasError) {
-                                return const Center(
-                                    child: Text("Snapshot Error"));
-                              } else if (snapshot.hasData) {
-                                return snapshot.data;
-                              } else {
-                                print("empty data");
-                                return const Text("empty data");
-                              }
+        //   print(details.targetElement);
+        //   var appointmentIndex = details.targetElement.index;
+        //   String appointmentId = details.appointments![appointmentIndex - 3].id;
+        await showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                  scrollable: true,
+                  content: Padding(
+                    padding: const EdgeInsets.all(0.0),
+                    child: FutureBuilder(
+                        future: _buildEventDetails(eventId),
+                        builder:
+                            (BuildContext context, AsyncSnapshot snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return (const Center(
+                              child: CircularProgressIndicator(),
+                            ));
+                          } else if (snapshot.connectionState ==
+                              ConnectionState.done) {
+                            if (snapshot.hasError) {
+                              return const Center(
+                                  child: Text("Snapshot Error"));
+                            } else if (snapshot.hasData) {
+                              return snapshot.data;
+                            } else {
+                              print("empty data");
+                              return const Text("empty data");
                             }
-                            return Text(snapshot.data);
-                          }),
-                    ));
-              });
+                          }
+                          return Text(snapshot.data);
+                        }),
+                  ));
+            });
         }
         if (details.targetElement == CalendarElement.calendarCell) {
           await showDialog(
@@ -257,39 +267,38 @@ class _MyCalendar2 extends State<MyCalendar2> {
     ));
   }
 
-  Future<List<Meeting>> _getMeetings() async {
-    List<Meeting> meetings = [];
-    var userEventsSnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('events')
-        .get();
+  // Future<List<Meeting>> _getMeetings() async {
+  //   List<Meeting> meetings = [];
+  //   var userEventsSnapshot = await FirebaseFirestore.instance
+  //       .collection('users')
+  //       .doc(user.uid)
+  //       .collection('events')
+  //       .get();
 
-    int len = userEventsSnapshot.docs.length;
-    for (var i = 0; i < len; i++) {
-      var meetingId = userEventsSnapshot.docs[i].id;
-      var eventName = userEventsSnapshot.docs[i].data()['eventName'];
-      //print(userEventsSnapshot.docs[i].data()['classId']);
-      //print(userEventsSnapshot.docs[i].data()['className']);
-      var color = _getColor(int.parse(
-          userEventsSnapshot.docs[i].data()['background'].toString()));
+  //   int len = userEventsSnapshot.docs.length;
+  //   for (var i = 0; i < len; i++) {
+  //     var meetingId = userEventsSnapshot.docs[i].id;
+  //     var eventName = userEventsSnapshot.docs[i].data()['eventName'];
+  //     //print(userEventsSnapshot.docs[i].data()['classId']);
+  //     //print(userEventsSnapshot.docs[i].data()['className']);
+  //     var color = _getColor(int.parse(
+  //         userEventsSnapshot.docs[i].data()['background'].toString()));
 
-      var from = DateTime.fromMillisecondsSinceEpoch(
-          (userEventsSnapshot.docs[i].data()['from'].seconds * 1000));
-      var to = DateTime.fromMillisecondsSinceEpoch(
-          userEventsSnapshot.docs[i].data()['to'].seconds * 1000);
-      //print(userEventsSnapshot.docs[i].data()['type']);
-      var _meeting = Meeting(eventName, from, to, color, false, meetingId);
-      meetings.add(_meeting);
-    }
+  //     var from = DateTime.fromMillisecondsSinceEpoch(
+  //         (userEventsSnapshot.docs[i].data()['from'].seconds * 1000));
+  //     var to = DateTime.fromMillisecondsSinceEpoch(
+  //         userEventsSnapshot.docs[i].data()['to'].seconds * 1000);
+  //     //print(userEventsSnapshot.docs[i].data()['type']);
+  //     var _meeting = Meeting(eventName, from, to, color, false, meetingId);
+  //     meetings.add(_meeting);
+  //   }
 
-    return meetings;
-  }
+  //   return meetings;
+  // }
 
   @override
   Widget build(BuildContext context) {
-    _getClasses();
-    _getMeetings();
+    //_getClasses();
     return FutureBuilder<List<Meeting>>(
         future: _getClasses(),
         builder: (BuildContext context, AsyncSnapshot<List<Meeting>> snapshot) {
