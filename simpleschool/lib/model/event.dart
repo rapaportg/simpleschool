@@ -1,3 +1,6 @@
+// ignore_for_file: non_constant_identifier_names
+
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,16 +19,30 @@ class Event {
   // too much of a hassel to fix right now)
   Meeting meeting;
   String? topic;
-  String? chapters; // comma seperated list
+  String? chapters;
+  String? description; // comma seperated list
 
+  List fileStoragePath;
+  Uint8List? rawFile;
   PlatformFile? file;
+  String? downloadUrl;
+  String? chatId;
+
+  bool hasFiles;
 
   Event(
       {required this.classId,
       this.eventId,
       required this.meeting,
       this.title,
-      this.type});
+      this.type,
+      this.downloadUrl,
+      this.topic,
+      this.chapters,
+      this.description,
+      this.chatId,
+      required this.hasFiles,
+      required this.fileStoragePath});
 
   Meeting getMeeting() {
     return meeting;
@@ -35,8 +52,44 @@ class Event {
     type = myType;
   }
 
+  String getType() {
+    return type!;
+  }
+
+  void setDownloadUrl({int i = 0}) async {
+    var ref = FirebaseStorage.instance.ref(fileStoragePath[i]);
+    downloadUrl = await ref.getDownloadURL();
+  }
+
+  Uint8List getRawFile() {
+    return rawFile!;
+  }
+
+  // accepts int index value if for later development of more than 1 pdf at a time
+  Future<String> getFileURL(int i) async {
+    var ref = FirebaseStorage.instance.ref(fileStoragePath[i]);
+    String tmp = await ref.getDownloadURL();
+    return tmp;
+  }
+
   void setTopic(String myTopic) {
     topic = myTopic;
+  }
+
+  void setDescription(String myDesc) {
+    description = myDesc;
+  }
+
+  String getTopic() {
+    return topic ?? "";
+  }
+
+  String getChapters() {
+    return chapters ?? "";
+  }
+
+  String getDescription() {
+    return description ?? "";
   }
 
   void setChapters(String myChapters) {
@@ -61,7 +114,9 @@ class Event {
       'from': meeting.from,
       'to': meeting.to,
       'isAllDay': meeting.isAllDay,
-      'type': type
+      'type': type,
+      'fileStoragePath': [],
+      'hasFiles': false
     };
 
     final DateFormat formatter = DateFormat('yyyy-MM-dd');
@@ -70,53 +125,67 @@ class Event {
   }
 
   Future<void> updateEventDetailsInFirebase() async {
-    print(eventId);
-    print(classId);
-    print(meeting);
-    print(title!);
-    print(topic ?? '');
-    print(type!);
-    print(chapters ?? '');
-    print(file!.name);
-
-    TaskSnapshot fileRef;
-    var document;
+    TaskSnapshot snapshot;
+    String downloadUrl = '';
+    Map<String, dynamic> document;
     if (file != null) {
+      document = {
+        'classId': classId!,
+        'className': title!,
+        'topic': topic ?? '',
+        'chapters': chapters ?? '',
+        'description': description ?? '',
+        'eventName': meeting.eventName,
+        'from': meeting.from,
+        'to': meeting.to,
+        'isAllDay': meeting.isAllDay,
+        'type': type,
+        'fileStoragePath': [],
+        'hasFiles': false,
+      };
       Uint8List? fileBytes = file!.bytes;
 
-      fileRef = await FirebaseStorage.instance
-          .ref('$classId/${file!.name}')
+      snapshot = await FirebaseStorage.instance
+          .ref('$eventId/${file!.name}')
           .putData(fileBytes!);
 
+      if (snapshot.state == TaskState.success) {
+        print("SUCCESS");
+        document = {
+          'classId': classId!,
+          'className': title!,
+          'topic': topic ?? '',
+          'chapters': chapters ?? '',
+          'description': description ?? '',
+          'eventName': meeting.eventName,
+          'from': meeting.from,
+          'to': meeting.to,
+          'isAllDay': meeting.isAllDay,
+          'type': type,
+          'fileStoragePath': ['$eventId/${file!.name}'],
+          'hasFiles': true
+        };
+      }
+      //print(document);
+
+    } else {
       document = {
-      'classId': classId!,
-      'className': title!,
-      'topic': topic ?? '',
-      'chapters': chapters ?? '',
-      'description': "placeholder",
-      'eventName': meeting.eventName,
-      'from': meeting.from,
-      'to': meeting.to,
-      'isAllDay': meeting.isAllDay,
-      'type': type,
-      'file': fileRef.metadata!.fullPath
-      };
-    }
-    else {
-      document = {
-      'classId': classId!,
-      'className': title!,
-      'topic': topic ?? '',
-      'chapters': chapters ?? '',
-      'description': "placeholder",
-      'eventName': meeting.eventName,
-      'from': meeting.from,
-      'to': meeting.to,
-      'isAllDay': meeting.isAllDay,
-      'type': type,
+        'classId': classId!,
+        'className': title!,
+        'topic': topic ?? '',
+        'chapters': chapters ?? '',
+        'description': description ?? '',
+        'eventName': meeting.eventName,
+        'from': meeting.from,
+        'to': meeting.to,
+        'isAllDay': meeting.isAllDay,
+        'type': type,
+        'fileStoragePath': [],
+        'hasFiles': false
       };
     }
 
+    print(document);
     var docRef = FirebaseFirestore.instance.doc(eventId!).set(document);
   }
 }

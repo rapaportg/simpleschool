@@ -1,4 +1,8 @@
+import 'dart:async';
 import 'dart:typed_data';
+import 'package:http/http.dart' as http;
+import 'package:http/retry.dart';
+import 'dart:io' as io;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,7 +11,16 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:simpleschool/model/event.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
+import 'package:pdfx/pdfx.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+
+import 'package:simpleschool/widget/pdf_viewer.dart';
+
+import 'package:simpleschool/widget/chat_box_widget.dart';
 
 class EventDetailsWidget extends StatefulWidget {
   final User user;
@@ -75,6 +88,7 @@ class _EventDetailsWidgetState extends State<EventDetailsWidget> {
                             textCapitalization: TextCapitalization.words,
                             enableInteractiveSelection: true,
                             name: 'topic',
+                            initialValue: event.getTopic(),
                             decoration: const InputDecoration(
                               labelText: 'What is the topic of todays class?',
                             ),
@@ -86,10 +100,24 @@ class _EventDetailsWidgetState extends State<EventDetailsWidget> {
                             textCapitalization: TextCapitalization.words,
                             enableInteractiveSelection: true,
                             name: 'chapters',
+                            initialValue: event.getChapters(),
                             decoration: const InputDecoration(
                                 labelText:
                                     'What chapters are covered this class?',
                                 hintText: "comma seperated list"),
+                            //validator: FormBuilderValidators.required(context),
+                          ),
+                          FormBuilderTextField(
+                            autovalidateMode:
+                                AutovalidateMode.onUserInteraction,
+                            textCapitalization: TextCapitalization.words,
+                            enableInteractiveSelection: true,
+                            maxLines: 10,
+                            initialValue: event.getDescription(),
+                            name: 'description',
+                            decoration: const InputDecoration(
+                              labelText: 'A useful textfield',
+                            ),
                             //validator: FormBuilderValidators.required(context),
                           ),
                         ]),
@@ -124,6 +152,7 @@ class _EventDetailsWidgetState extends State<EventDetailsWidget> {
                               //     .putData(fileBytes);
                               //==================================================================
                             }
+                            event.updateEventDetailsInFirebase();
                           } else {
                             // User canceled the picker
                           }
@@ -181,6 +210,12 @@ class _EventDetailsWidgetState extends State<EventDetailsWidget> {
                                   _formKey.currentState!.value['topic']);
                             }
 
+                            if (_formKey.currentState!.value['description'] !=
+                                null) {
+                              event.setDescription(
+                                  _formKey.currentState!.value['description']);
+                            }
+
                             event.updateEventDetailsInFirebase();
                           } else {
                             print("validation failed");
@@ -202,42 +237,93 @@ class _EventDetailsWidgetState extends State<EventDetailsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Todo: [] title
+    print("hit 1");
+    // Todo: [X] title
     //       [] time
     //       [] description
     //       [] pdf reader
     //       [] discussion board
-    //       [] ability to edit
+    //       [Sorta there] ability to ediy
     // -----------------------------------------
+    // print('demo_data/' + event.getFilePath());
+
+    // Widget _pdfViewer = Text("No files added");
+    // if (event.hasFiles) {
+    //   _pdfViewer = PdfViewerWidget(event: event);
+    // }
+
+    var date = event.eventId!.split('/').last.split('-');
+    var date_fixed = date[1] + '/' + date[2] + '/' + date[0];
+
     return Container(
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: Scaffold(
-            appBar: AppBar(title: Text(event.title!), actions: <Widget>[
-              IconButton(
-                icon: const Icon(Icons.settings),
-                tooltip: 'Update event details',
-                onPressed: () {
-                  showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          scrollable: true,
-                          content: Padding(
-                            padding: const EdgeInsets.all(0.0),
-                            child: updateEvent(context),
+            appBar: AppBar(
+                title: Column(children: [
+                  Text(event.title!, style: TextStyle(fontSize: 16)),
+                  Text(
+                    event.getTopic(),
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ]),
+                actions: <Widget>[
+                  IconButton(
+                    icon: const Icon(Icons.settings),
+                    tooltip: 'Update event details',
+                    onPressed: () {
+                      showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              scrollable: true,
+                              content: Padding(
+                                padding: const EdgeInsets.all(0.0),
+                                child: updateEvent(context),
+                              ),
+                            );
+                          });
+                      // handle the press
+                    },
+                  )
+                ]),
+            body: SingleChildScrollView(
+                child: Container(
+                    width: MediaQuery.of(context).size.width,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        //Text(event.getTopic()),
+
+                        Container(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: SelectableText(event.description!),
                           ),
-                        );
-                      });
-                  // handle the press
-                },
-              )
-            ]),
-            body: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Event Topic"),
-              ],
-            )));
+                        ),
+                        Row(children: [
+                          Expanded(
+                              flex: 3,
+                              child: Container(
+                                  color: Colors.blue.shade200,
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.7,
+                                  // width:
+                                  //     MediaQuery.of(context).size.width * 0.7,
+                                  child: Center(
+                                      child: Text(
+                                          "A lecture PDF should go here")))),
+                          Expanded(
+                              flex: 1,
+                              child: Container(
+                                  color: Colors.blue.shade100,
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.7,
+                                  child:
+                                      ChatBoxWidget(chatId: 'test', user: user,),))
+                                      //Center(child: Text("Chat goes here")))),
+                        ]),
+                      ],
+                    )))));
   }
 }

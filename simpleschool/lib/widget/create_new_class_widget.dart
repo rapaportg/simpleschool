@@ -156,8 +156,8 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
   Event _createEvent(String classId, Map document, DateTime startDate) {
     Meeting? newMeeting;
     Event? newEvent;
-    DateTime tmpStart = startDate;
-    DateTime tmpEnd = startDate;
+    DateTime tmpStart = DateUtils.dateOnly(startDate);
+    DateTime tmpEnd = DateUtils.dateOnly(startDate);
     tmpStart = tmpStart.add(Duration(
         hours: document['meeting_time']['start']['hour'],
         minutes: document['meeting_time']['start']['minute']));
@@ -176,9 +176,11 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
         classId: classId,
         title: document['name'],
         type: 'class',
+        fileStoragePath: [],
+        hasFiles: false,
         meeting: newMeeting);
 
-    //print(newEvent);
+    print(newEvent);
 
     return (newEvent);
   }
@@ -189,44 +191,37 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
     Map? meetingSchedule = document['meeting_schedule'];
     DateTime? startDate = document['start_date'];
     DateTime? endDate = document['end_date'];
+    print(startDate);
     List<DateTime>? eventDates;
+
     int numMeetingsPerWeek = _numOfDaysPerWeek(document['meeting_schedule']);
 
-    var numOfEvents =
-        endDate!.difference(startDate!).inDays / 7 * numMeetingsPerWeek;
+    var numOfDaysBetweenStartAndEnd = endDate!.difference(startDate!).inDays;
 
     // print("\n\n_initEvents()");
     // print("start date: " + startDate.toString());
-    // print("end date: " + endDate.toString());
-    // print("num of events: " + numOfEvents.toString());
-    
-    var start = startDate;
-    for (int i = 0; i < endDate.difference(startDate).inDays; i++) {
- 
+    //print("end date: " + endDate.toString());
+    // print("num of events: " + numOfDaysBetweenStartAndEnd.toString());
+
+    var start = DateUtils.dateOnly(startDate);
+    for (int i = 0; i < numOfDaysBetweenStartAndEnd; i++) {
       // if (startDate.weekday == DateTime.sunday) {
       //   print('sunday');
       // }
       if (start.weekday == DateTime.monday && meetingSchedule!['monday']) {
-
         events.add(_createEvent(classId, document, start));
       }
-      if (start.weekday == DateTime.tuesday &&
-          meetingSchedule!['tuesday']) {
-
+      if (start.weekday == DateTime.tuesday && meetingSchedule!['tuesday']) {
         events.add(_createEvent(classId, document, start));
       }
       if (start.weekday == DateTime.wednesday &&
           meetingSchedule!['wednesday']) {
-   
         events.add(_createEvent(classId, document, start));
       }
-      if (start.weekday == DateTime.thursday &&
-          meetingSchedule!['thursday']) {
-  
+      if (start.weekday == DateTime.thursday && meetingSchedule!['thursday']) {
         events.add(_createEvent(classId, document, start));
       }
       if (start.weekday == DateTime.friday && meetingSchedule!['friday']) {
-  
         events.add(_createEvent(classId, document, start));
       }
       // if (startDate.weekday == DateTime.saturday) {
@@ -237,9 +232,12 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
     }
 
     print(events.length);
-    for (int i = 0; i < events.length; i++) {
-      await events[i].addEventToFirebase();
-    }
+
+    //// ADD A DB Confirmation check to see if all events.lengths documents were added
+    // ignore: void_checks
+    events.forEach((element) {
+      element.addEventToFirebase();
+    });
   }
 
 //TODO: add check to see if class already exists
@@ -261,6 +259,8 @@ class _CreateNewClassWidgetState extends State<CreateNewClassWidget> {
       'ta': '',
       'ta_email': ''
     };
+
+    print('Start Date: ${document['start_date']}');
 
     var docID =
         await FirebaseFirestore.instance.collection('classes').add(document);

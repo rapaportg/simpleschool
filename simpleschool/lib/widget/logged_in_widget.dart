@@ -59,6 +59,7 @@ class _UserLoggedInWidgetState extends State<UserLoggedInWidget> {
             SizedBox(
               height: 5,
             ),
+            Container(height: 10,),
             CircleAvatar(
               minRadius: 5,
               maxRadius: 42,

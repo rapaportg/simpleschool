@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:firebase_core_web/firebase_core_web_interop.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +18,7 @@ import 'package:simpleschool/widget/event_details_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 
 List<Color> colors = [
   Colors.blue.shade300,
@@ -47,8 +50,8 @@ class MyCalendar2 extends StatefulWidget {
 class _MyCalendar2 extends State<MyCalendar2> {
   final User user;
   String entryType = "1";
-
   List<Color> _colorCollection = <Color>[];
+  Uint8List? rawData;
 
   _MyCalendar2(this.user);
 
@@ -78,9 +81,10 @@ class _MyCalendar2 extends State<MyCalendar2> {
     List<Meeting> thisWeeksClasses = [];
     DateTime now = DateTime.now();
     //String nowStr = dateFormat.format(DateTime. now());
-    DateTime thisWeekMonday = _findMonday(now);
+    DateTime lastWeekMonday =
+        _findMonday(now).subtract(const Duration(days: 7));
 
-    print(thisWeekMonday);
+    //print(lastWeekMonday);
 
     var userSnapshot = await FirebaseFirestore.instance
         .collection('users')
@@ -97,14 +101,14 @@ class _MyCalendar2 extends State<MyCalendar2> {
       classId = classList[j]['classId'];
       color = classList[j]['color'];
       //print(classId);
-      for (var i = 0; i < 5; i++) {
-        //print(classId);
-        // print(dateFormat.format(thisWeekMonday.add(Duration(days: i))));
+      for (var i = 0; i < 21; i++) {
+        //print(i);
+        //print(dateFormat.format(lastWeekMonday.add(Duration(days: i))));
         try {
           await FirebaseFirestore.instance
               .doc(classId)
               .collection("events")
-              .doc(dateFormat.format(thisWeekMonday.add(Duration(days: i))))
+              .doc(dateFormat.format(lastWeekMonday.add(Duration(days: i))))
               .get()
               .then((doc) {
             if (doc.exists == true) {
@@ -135,38 +139,74 @@ class _MyCalendar2 extends State<MyCalendar2> {
     return (thisWeeksClasses);
   }
 
+  Future<String> _getFile(String filePath) async {
+    var lst = filePath.split('/');
+    print(lst);
+    firebase_storage.Reference ref = firebase_storage.FirebaseStorage.instance
+        .ref()
+        .child(lst[0])
+        .child(lst[1])
+        .child(lst[2])
+        .child(lst[3]);
+
+    print(ref);
+    String downloadURL = await ref.getDownloadURL();
+    print(downloadURL);
+    return downloadURL;
+  }
+
   Future<Widget> _buildEventDetails(String eventId) async {
     print('${eventId}');
     var eventSnapshot = await FirebaseFirestore.instance.doc(eventId).get();
 
     Meeting meetingInfo = Meeting(
-        eventSnapshot.data()!['eventName'],
-        DateTime.fromMillisecondsSinceEpoch(eventSnapshot.data()!['from'].seconds *1000),
-        DateTime.fromMillisecondsSinceEpoch(eventSnapshot.data()!['to'].seconds *1000),
-        colors[0],
-        false,
-        eventId,
-        );
+      eventSnapshot.data()!['eventName'],
+      DateTime.fromMillisecondsSinceEpoch(
+          eventSnapshot.data()!['from'].seconds * 1000),
+      DateTime.fromMillisecondsSinceEpoch(
+          eventSnapshot.data()!['to'].seconds * 1000),
+      colors[0],
+      false,
+      eventId,
+    );
 
-    Event event = Event(
-        eventId: eventId,
-        classId: eventSnapshot.data()!['classId'],
-        title: eventSnapshot.data()!['eventName'],
-        type: eventSnapshot.data()!['type'],
-        meeting: meetingInfo);
+    Event event;
+    bool hasFiles = eventSnapshot.data()!['hasFiles'];
+    if (hasFiles) {
+      print("has file data");
+      var fileList = eventSnapshot.data()!['fileStoragePath'];
+      event = Event(
+          eventId: eventId,
+          classId: eventSnapshot.data()!['classId'],
+          title: eventSnapshot.data()!['eventName'],
+          type: eventSnapshot.data()!['type'],
+          topic: eventSnapshot.data()!['topic'] ?? '',
+          chapters: eventSnapshot.data()!['chapters'] ?? '',
+          description: eventSnapshot.data()!['description'] ?? '',
+          chatId: eventSnapshot.data()!['chartId'] ?? '',
+          hasFiles: true,
+          fileStoragePath: fileList,
+          meeting: meetingInfo);
+      print("hit A");
+    } else {
+      print("does not have file data");
+      event = Event(
+          eventId: eventId,
+          classId: eventSnapshot.data()!['classId'],
+          title: eventSnapshot.data()!['eventName'],
+          type: eventSnapshot.data()!['type'],
+          topic: eventSnapshot.data()!['topic'] ?? '',
+          chapters: eventSnapshot.data()!['chapters'] ?? '',
+          description: eventSnapshot.data()!['description'] ?? '',
+          chatId: eventSnapshot.data()!['chartId'] ?? '',
+          hasFiles: false,
+          fileStoragePath: [],
+          meeting: meetingInfo);
+    }
 
     //return Text(eventSnapshot.data()!['eventName']);
+    print('hit 0');
     return EventDetailsWidget(user: user, event: event);
-
-    // ----------------------------------------
-    // Make a new widget
-    // Todo: [] title
-    //       [] time
-    //       [] description
-    //       [] pdf reader
-    //       [] discussion board
-    //       [] ability to edit
-    // -----------------------------------------
   }
 
   Widget _calendar(List<Meeting> _meetings) {
@@ -183,41 +223,41 @@ class _MyCalendar2 extends State<MyCalendar2> {
         var eventId = details.appointments![details.targetElement.index - 3].id;
 
         if (details.targetElement == CalendarElement.appointment) {
-        //   print(details.targetElement);
-        //   var appointmentIndex = details.targetElement.index;
-        //   String appointmentId = details.appointments![appointmentIndex - 3].id;
-        await showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                  scrollable: true,
-                  content: Padding(
-                    padding: const EdgeInsets.all(0.0),
-                    child: FutureBuilder(
-                        future: _buildEventDetails(eventId),
-                        builder:
-                            (BuildContext context, AsyncSnapshot snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return (const Center(
-                              child: CircularProgressIndicator(),
-                            ));
-                          } else if (snapshot.connectionState ==
-                              ConnectionState.done) {
-                            if (snapshot.hasError) {
-                              return const Center(
-                                  child: Text("Snapshot Error"));
-                            } else if (snapshot.hasData) {
-                              return snapshot.data;
-                            } else {
-                              print("empty data");
-                              return const Text("empty data");
+          //   print(details.targetElement);
+          //   var appointmentIndex = details.targetElement.index;
+          //   String appointmentId = details.appointments![appointmentIndex - 3].id;
+          await showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                    scrollable: false,
+                    content: Padding(
+                      padding: const EdgeInsets.all(0.0),
+                      child: FutureBuilder(
+                          future: _buildEventDetails(eventId),
+                          builder:
+                              (BuildContext context, AsyncSnapshot snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return (const Center(
+                                child: CircularProgressIndicator(),
+                              ));
+                            } else if (snapshot.connectionState ==
+                                ConnectionState.done) {
+                              if (snapshot.hasError) {
+                                return const Center(
+                                    child: Text("Snapshot Error"));
+                              } else if (snapshot.hasData) {
+                                return snapshot.data;
+                              } else {
+                                print("empty data");
+                                return const Text("empty data");
+                              }
                             }
-                          }
-                          return Text(snapshot.data);
-                        }),
-                  ));
-            });
+                            return Text(snapshot.data);
+                          }),
+                    ));
+              });
         }
         if (details.targetElement == CalendarElement.calendarCell) {
           await showDialog(
@@ -266,35 +306,6 @@ class _MyCalendar2 extends State<MyCalendar2> {
       },
     ));
   }
-
-  // Future<List<Meeting>> _getMeetings() async {
-  //   List<Meeting> meetings = [];
-  //   var userEventsSnapshot = await FirebaseFirestore.instance
-  //       .collection('users')
-  //       .doc(user.uid)
-  //       .collection('events')
-  //       .get();
-
-  //   int len = userEventsSnapshot.docs.length;
-  //   for (var i = 0; i < len; i++) {
-  //     var meetingId = userEventsSnapshot.docs[i].id;
-  //     var eventName = userEventsSnapshot.docs[i].data()['eventName'];
-  //     //print(userEventsSnapshot.docs[i].data()['classId']);
-  //     //print(userEventsSnapshot.docs[i].data()['className']);
-  //     var color = _getColor(int.parse(
-  //         userEventsSnapshot.docs[i].data()['background'].toString()));
-
-  //     var from = DateTime.fromMillisecondsSinceEpoch(
-  //         (userEventsSnapshot.docs[i].data()['from'].seconds * 1000));
-  //     var to = DateTime.fromMillisecondsSinceEpoch(
-  //         userEventsSnapshot.docs[i].data()['to'].seconds * 1000);
-  //     //print(userEventsSnapshot.docs[i].data()['type']);
-  //     var _meeting = Meeting(eventName, from, to, color, false, meetingId);
-  //     meetings.add(_meeting);
-  //   }
-
-  //   return meetings;
-  // }
 
   @override
   Widget build(BuildContext context) {
